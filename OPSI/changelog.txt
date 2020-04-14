@@ -1,0 +1,7 @@
+
+[Changelog]
+windirstat (1.1.2-3) stable; urgency=medium
+
+  * initial by opsi-setup-detector - Version: 4.1.0.14
+
+-- valmont2k <valmont2k@yandex.ru> Вт, 14 апр 2020 02:47:50 +0300

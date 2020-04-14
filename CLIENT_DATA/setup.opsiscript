@@ -1,0 +1,122 @@
+; ----------------------------------------------------------------
+; Copyright (c) uib gmbh (www.uib.de)
+; This sourcecode is owned by uib
+; and published under the Terms of the General Public License.
+; ----------------------------------------------------------------
+
+[Actions]
+requiredWinstVersion >= "4.12.0.28"
+ScriptErrorMessages = false
+
+DefVar $ProductId$
+DefVar $InstallDir$
+DefVar $MinimumSpace$
+DefVar $ExitCode$
+DefVar $ErrorString$
+DefVar $LicenseRequired$
+DefVar $LicenseKey$
+DefVar $LicensePool$
+DefVar $LogDir$
+DefVar $OS$
+DefVar $oldProgFound$
+
+
+Set $LogDir$ = "%opsiLogDir%"
+
+; import complete file !
+importlib "uib_exitcode.opsiscript"
+importlib "%scriptpath%\osd-lib.opsiscript"
+
+
+; ----------------------------------------------------------------
+; $ProductId$ is the name of the product in opsi, only lower letters, no umlauts, no white spaces, use '-' as a seperator
+Set $ProductId$		= "windirstat"
+; the path where we find the product after the installation
+Set $InstallDir$	= "C:\Program Files (x86)\WinDirStat"
+Set $LicenseRequired$ = "False"
+Set $LicensePool$	  = "" 
+Set $MinimumSpace$	 = "4 MB"
+; ----------------------------------------------------------------
+
+set $OS$ = GetOS
+
+if not(($OS$ = "Windows_NT"))
+	logError "Installation aborted: wrong OS version: only Windows"
+	isFatalError "wrong OS"
+endif
+
+if not(HasMinimumSpace ("%SystemDrive%", $MinimumSpace$))
+	LogError "Not enough space on %SystemDrive%, " + $MinimumSpace$ + " on drive %SystemDrive% needed for " + $ProductId$
+	isFatalError "No Space"
+	; Stop process and set installation status to failed
+endif
+
+comment "Show product picture"
+ShowBitmap "%ScriptPath%\" + $ProductId$ + ".png" $ProductId$
+
+
+
+if FileExists("%ScriptPath%\delsub.opsiscript")
+	comment "Start uninstall sub section"
+	Sub "%ScriptPath%\delsub.opsiscript"
+endif
+
+Message "Installing " + $ProductId$ + " ..."
+
+if $LicenseRequired$ = "true"
+	comment "Licensing required, reserve license and get license key"
+	set $LicenseKey$ = get_licensekey_byPoolOrKey($LicensePool$)
+endif
+
+
+comment "Start setup program"
+ChangeDirectory "%SCRIPTPATH%\files"
+
+Registry_changes  /AllNTUserdats /64bit
+
+
+
+DosInAnIcon_PowerShell_ExecutionPolicy
+ExecWith_PowerShell_NichtPDCAktionen powershell.exe winst /sysnative
+;----------------------------------------------
+Winbatch_install	
+;----------------------------------------------
+Sub_check_exitcode
+
+[Registry_changes]
+OpenKey [Software\Microsoft\Windows\CurrentVersion\Run]
+Set "WinDirStat" = "C:\Program Files (x86)\WinDirStat\windirstat.exe"
+
+
+
+[DosInAnIcon_PowerShell_ExecutionPolicy]
+echo "powershell set-executionpolicy RemoteSigned ..."
+powershell.exe set-executionpolicy RemoteSigned
+exit %ERRORLEVEL%
+
+[ExecWith_PowerShell_NichtPDCAktionen]
+; hier Dein PS-Code
+
+New-NetFirewallRule -DisplayName 'OPSI-Inbound' -Profile @('Domain', 'Private', 'Public') -Direction Inbound -Action Allow -Protocol TCP -LocalPort @('4441', '4447')
+
+
+
+
+
+
+[Winbatch_install]
+"%scriptpath%\files\windirstat1_1_2_setup.exe" /S
+
+[sub_check_exitcode]
+set $ExitCode$ = getlastexitcode
+if stringtobool(isNsisExitcodeFatal($exitcode$, "true", $ErrorString$ ))
+	LogError $ErrorString$
+	isfatalerror $ErrorString$
+else
+	Comment $ErrorString$
+endif
+
+
+; ----------------------------------------------------------------
+; ----------------------------------------------------------------
+

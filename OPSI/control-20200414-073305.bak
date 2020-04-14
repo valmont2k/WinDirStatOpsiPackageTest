@@ -1,0 +1,26 @@
+[Package]
+version: 5
+depends: 
+incremental: False
+
+[Product]
+type: localboot
+id: windirstat
+name: WinDirStat
+description: 
+advice: 
+
+
+version: 1.1.2
+priority: 0
+licenseRequired: False
+productClasses: 
+setupScript: setup.opsiscript
+uninstallScript: uninstall.opsiscript
+updateScript: 
+alwaysScript: 
+onceScript: 
+customScript: 
+userLoginScript: 
+
+[Changelog]

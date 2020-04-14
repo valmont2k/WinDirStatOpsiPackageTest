@@ -1,0 +1,63 @@
+; Copyright (c) uib gmbh (www.uib.de)
+; This sourcecode is owned by uib gmbh
+; and published under the Terms of the General Public License.
+
+Message "Check for existing installation of " + $ProductId$ + " ..."
+
+
+[Registry_changes]
+OpenKey [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]
+;Set "WinDirStat" = "C:\Program Files (x86)\WinDirStat\windirstat.exe"
+DeleteVar "WinDirStat"
+
+DosInAnIcon_PowerShell_ExecutionPolicy
+ExecWith_PowerShell_NichtPDCAktionen powershell.exe winst /sysnative
+
+
+
+
+
+if $oldProgFound$ = "true"
+	Message "Uninstalling " + $ProductId$ + " ..."
+	
+	comment "Start uninstall program"
+	ChangeDirectory "%SCRIPTPATH%\files"
+	;----------------------------------------------
+	Winbatch_uninstall  /WaitForProcessEnding "Au_.exe" /TimeOutSeconds 20
+	;----------------------------------------------
+	Sub_check_exitcode_del
+	
+	if not(($InstallDir$ = '') or ($InstallDir$ = 'unknown'))
+		Files_uninstall
+	endif
+	
+endif
+
+
+
+[DosInAnIcon_PowerShell_ExecutionPolicy]
+echo "powershell set-executionpolicy RemoteSigned ..."
+powershell.exe set-executionpolicy RemoteSigned
+exit %ERRORLEVEL%
+
+[ExecWith_PowerShell_NichtPDCAktionen]
+; hier Dein PS-Code
+Remove-NetFirewallRule -DisplayName 'OPSI-Inbound' 
+
+[Winbatch_uninstall]
+"$Installdir$\uninstall.exe" /S
+
+[Sub_check_exitcode_del]
+set $ExitCode$ = getlastexitcode
+if stringtobool(isNsisExitcodeFatal($exitcode$, "true", $ErrorString$ ))
+	LogError $ErrorString$
+	isfatalerror $ErrorString$
+else
+	Comment $ErrorString$
+endif
+
+[Files_uninstall]
+del -sf "$InstallDir$\"
+
+
+;-----------------------------------------------------
